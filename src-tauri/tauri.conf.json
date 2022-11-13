@@ -11,6 +11,7 @@
     "version": "0.0.0"
   },
   "tauri": {
+
     "allowlist": {
       "all": true
     },
@@ -29,7 +30,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.inoriaizawa.opensteamauth",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
