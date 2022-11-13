@@ -58,11 +58,15 @@ fn get_trade_confirmations(account_name: String, password: String) -> Vec<(Strin
     if account_name.is_empty() || password.is_empty() {
         return vec![("error".to_string(), "account name or password is empty".to_string(), "-1".to_string())];
     }
-    println!("Getting trade confirmations for {}", account_name);
+    if !does_steamguard_acc_exist(account_name.clone()){
+        return vec![("error".to_string(), "Account does not exist".to_string(), "-1".to_string())];
+    }
+    println!("Getting trade confirmations for {}", account_name.clone());
 
     let mut confirmations: Vec<(String, String, String)> = Vec::new();
     let mut account = get_steamguard_acc(account_name.to_string());
     let mut session = login_to_steam(account_name.to_string(), password.to_string(), &account);
+    // let mut session = account.session.as_ref().unwrap().expose_secret().clone();
     if session.is_err() {
         confirmations.push(("error".to_string(), "login failed".to_string(), "-3".to_string()));
         println!("Login failed: {:?}", session.err().unwrap());
@@ -125,10 +129,24 @@ fn get_configs_with_password() -> accountmanager::Manifest
     }
     return accounts;
 }
+fn does_steamguard_acc_exist(account_name: String) -> bool
+{
+    let configs = &MANIFEST;
+    let account = configs.account_exists(&account_name);
+    return account;
+}
 fn get_steamguard_acc(account: String) -> SteamGuardAccount{
     let configs = &MANIFEST;
-    let account = configs.get_account(&account).unwrap().lock().unwrap().clone();
-    return account;
+    if configs.account_exists(&account.to_string()){
+        let account = configs.get_account(&account).unwrap().lock().unwrap().clone();
+        return account;
+    }
+    else {
+        println!("Account {} does not exist", &account);
+        return SteamGuardAccount::new();
+    }
+    // let account = configs.get_account(&account).unwrap().lock().unwrap().clone();
+    // return account;
 }
 
 
