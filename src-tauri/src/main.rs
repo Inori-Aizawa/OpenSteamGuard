@@ -16,18 +16,53 @@ use log::*;
 mod errors;
 #[path = "./steam/encryption.rs"]
 mod encryption;
-
+use mut_static::MutStatic;
+use std::mem;
+use std::ops::DerefMut;
 #[macro_use]
 extern crate lazy_static;
+pub struct PassWord { value: String }
 
+impl PassWord {
+    pub fn new(value: String) -> Self {
+        PassWord{ value: value }
+    }
 
+    pub fn get_value(&self) -> String {
+        self.value.to_owned()
+    }
+
+    pub fn set_value(&mut self, value: String) {
+        self.value = value
+    }
+}
 lazy_static! {
-    static ref MANIFEST: Manifest = get_configs_with_password();
-    static ref PASSWORD: String = input("Enter password: ");
+    pub static ref Pass_Word: MutStatic<PassWord> = {
+        MutStatic::new()
+    };
+}
+lazy_static! {
+    pub static ref PassWord_Preset: MutStatic<PassWord> = {
+        MutStatic::new()
+    };
 }
 
 
 
+
+
+lazy_static! {
+    static ref MANIFEST: Manifest = get_configs_with_password();
+}
+
+#[tauri::command]
+fn get_account_list() -> Vec<String>{
+    let mut account_list: Vec<String> = Vec::new();
+    for entry in MANIFEST.entries.iter() {
+        account_list.push(entry.account_name.to_owned());
+    }
+    account_list
+}
 // remember to call `.manage(MyState::default())`
 fn get_auth_codes() -> Vec<(String, String, String)>{
     let configs = &MANIFEST;
@@ -50,6 +85,19 @@ fn get_auth_codes() -> Vec<(String, String, String)>{
 #[tauri::command]
 fn heartbeat(window: Window){
     window.emit("auth_codes", get_auth_codes()).unwrap();
+} 
+#[tauri::command]
+fn submit_password(window: Window, password: String){
+    Pass_Word.set(PassWord::new(password));
+    // window.emit("auth_codes", get_auth_codes()).unwrap();
+    &MANIFEST;
+    // *PASSWORD = password;
+}
+#[tauri::command]
+fn initialazation(window: Window){
+    println!("initialazation");
+    println!("NeedPassword: {}", config_has_password());
+    window.emit("need_password",config_has_password()).unwrap();
 } 
 #[tauri::command]
 fn get_trade_confirmations(account_name: String, password: String) -> Vec<(String, String, String)>
@@ -99,15 +147,16 @@ fn get_trade_confirmations(account_name: String, password: String) -> Vec<(Strin
 }
 
 fn main() {
-    let _ = &PASSWORD;
-    //wait for the user to enter their password
-    while PASSWORD.is_empty() {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-    }
+    Pass_Word.set(PassWord::new("".to_string())).unwrap();
+    // let _ = &PASSWORD;
+    // //wait for the user to enter their password
+    // while PASSWORD.is_empty() {
+    //     std::thread::sleep(std::time::Duration::from_millis(100));
+    // }
   
     
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![heartbeat, get_trade_confirmations])
+        .invoke_handler(tauri::generate_handler![submit_password,initialazation,heartbeat,get_account_list, get_trade_confirmations])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -118,7 +167,7 @@ fn get_configs_with_password() -> accountmanager::Manifest
     let mut accounts = accountmanager::Manifest::load(&path).unwrap();
     //send a message to the frontend to get the password
     
-    let password = PASSWORD.to_string();
+    let password = Pass_Word.read().unwrap().get_value();
     accounts.submit_passkey(Some(password.to_string()));
     if accounts.load_accounts().is_err() {
         //return empty manifest
@@ -149,7 +198,18 @@ fn get_steamguard_acc(account: String) -> SteamGuardAccount{
     // return account;
 }
 
-
+fn config_has_password() -> bool
+{
+    let path = dirs::home_dir().unwrap().join(".config/steamguard-cli/maFiles/manifest.json");
+    println!("path: {:?}", path);
+    let mut accounts = accountmanager::Manifest::load(&path).unwrap();
+    if accounts.load_accounts().is_err() {
+        //return empty manifest
+        println!("error loading accounts");
+        return true;
+    }
+    return false;
+}
 fn get_configs() -> accountmanager::Manifest
 {
     let path = dirs::home_dir().unwrap().join(".config/steamguard-cli/maFiles/manifest.json");

@@ -1,8 +1,6 @@
 const { listen, emit } = window.__TAURI__.event;
 const { invoke } = window.__TAURI__.tauri;
-
 listen("auth_codes", (event) => {
-  console.log(event.payload);
   codes = event.payload;
     //loop through codes and display them
   //clear the greet-mgs
@@ -21,6 +19,15 @@ listen("auth_codes", (event) => {
 
   });
 });
+listen("need_password", (event) => {
+  if(event.payload == true){
+    console.log("need password");
+   password = window.prompt("Enter password");
+   invoke("submit_password", {"password": password}) // document.getElementById("confirmations-btn").style.display = "block";
+   setInterval(heartbeat, 1000);
+heartbeat()
+  }
+})
 
 function notify(message) {
   emit("auth_codes", { "hello": "world" });
@@ -38,6 +45,7 @@ window.onload = function () {
   let button = document.getElementById("confirmations-btn");
   //add an event listener to the button
   button.addEventListener("click", get_trade_confirmations);
+  initialize()
 
 }
 
@@ -59,8 +67,23 @@ async function get_trade_confirmations() {
     currentDiv.appendChild(newDiv);
 
   });
+
 }
+async function initialize(){
+await invoke("initialazation");
+create_dropdown();
+}
+
 // get_trade_confirmations()
 //call greet every 5 seconds
-setInterval(heartbeat, 1000);
-heartbeat()
+
+
+async function create_dropdown(){
+  let dropdown = document.getElementById("confirm_user");
+  let users = await invoke("get_account_list")
+  users.forEach(element => {
+    let option = document.createElement("option");
+    option.text = element;
+    dropdown.add(option);
+  });
+}

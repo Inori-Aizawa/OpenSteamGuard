@@ -31,7 +31,7 @@ base64 = "0.13.0"
 chrono = "0.4.19"
 cortex-m = "0.7.3"
 lazy_static = "1.4.0"
-
+mut_static = "5.0.0"
 
 [dev-dependencies]
 tempdir = "0.3"
